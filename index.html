@@ -396,6 +396,7 @@ async function avviaTimer(sec, prossimo){
   $('#timer').classList.remove('end'); $('#timer').classList.add('on'); $('#tSkip').textContent = 'Salta la pausa';
   clearInterval(tInt); tick(); tInt = setInterval(tick, 250);
   // tiene acceso lo schermo durante la pausa
+  try{ window.AndroidApp && AndroidApp.schermoAcceso(true); }catch(e){}
   try{ if ('wakeLock' in navigator && !wake) wake = await navigator.wakeLock.request('screen'); }catch(e){}
 }
 function tick(){
@@ -407,7 +408,8 @@ function tick(){
     suona(); vibra([400,150,400,150,600]);
   }
 }
-function chiudiTimer(){ clearInterval(tInt); tInt = null; $('#timer').classList.remove('on'); try{ wake && wake.release(); }catch(e){} wake = null; }
+function chiudiTimer(){ clearInterval(tInt); tInt = null; $('#timer').classList.remove('on'); try{ wake && wake.release(); }catch(e){} wake = null;
+  try{ window.AndroidApp && AndroidApp.schermoAcceso(false); }catch(e){} }
 $('#tSkip').onclick = chiudiTimer;
 $('#tPlus').onclick = () => { if (!tInt){ $('#timer').classList.remove('end'); $('#tTitle').textContent='Pausa'; $('#tSkip').textContent='Salta la pausa'; tFine = Date.now(); tInt = setInterval(tick,250); } tFine += 30000; tick(); };
 
@@ -522,6 +524,8 @@ function impostazioni(){
 }
 function salvaImpostazioni(){ const v = $('#inizio').value; S.start = v || null; save(); $('#dlg').close(); render(); }
 function esporta(){
+  const nome = 'massa-backup-'+iso(oggi())+'.json';
+  if (window.AndroidApp){ toast(AndroidApp.salvaFile(nome, JSON.stringify(S,null,1))); return; } // app Android
   const blob = new Blob([JSON.stringify(S,null,1)], {type:'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'massa-backup-'+iso(oggi())+'.json'; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
