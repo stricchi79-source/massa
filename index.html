@@ -391,11 +391,12 @@ function suona(){
 }
 async function avviaTimer(sec, prossimo){
   try{ audio = audio || new (window.AudioContext||window.webkitAudioContext)(); audio.resume(); }catch(e){} // sblocca l'audio col tocco
-  try{ if ('wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); }catch(e){}
   tFine = Date.now() + sec*1000;
   $('#tTitle').textContent = 'Pausa'; $('#tNext').textContent = prossimo || '';
   $('#timer').classList.remove('end'); $('#timer').classList.add('on'); $('#tSkip').textContent = 'Salta la pausa';
   clearInterval(tInt); tick(); tInt = setInterval(tick, 250);
+  // tiene acceso lo schermo durante la pausa
+  try{ if ('wakeLock' in navigator && !wake) wake = await navigator.wakeLock.request('screen'); }catch(e){}
 }
 function tick(){
   const r = Math.max(0, Math.ceil((tFine - Date.now())/1000));
