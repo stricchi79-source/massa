@@ -66,12 +66,33 @@ label.l{display:block;color:var(--mut);font-size:16px;margin-top:14px}
 .hint{background:#3a2a10;border:1px solid #6b4a14;color:var(--warn);border-radius:14px;padding:12px;margin-top:12px;font-size:17px}
 .good{background:#123522;border:1px solid #1f6b3d;color:var(--ok);border-radius:14px;padding:12px;margin-top:12px;font-size:18px}
 /* timer */
+.crono{font-size:min(28vw,120px);font-weight:800;line-height:1;text-align:center;margin:14px 0 8px;letter-spacing:-2px}
+.crono.run{color:var(--blue);cursor:pointer}
+.serieN{font-size:36px;font-weight:800;color:var(--acc);margin-top:10px;line-height:1.1}
+.repsN{font-size:24px;font-weight:700;margin-top:4px}
+.big.huge{min-height:96px;font-size:28px}
+.sets span.cur{background:var(--acc);color:#1a0d02;font-weight:700}
+.hint.lato{font-size:28px;font-weight:800;text-align:center}
 #timer{position:fixed;inset:0;background:#0b0e12;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
 #timer.on{display:flex}
-#timer .n{font-size:110px;font-weight:800;line-height:1;margin:16px 0}
-#timer.end .n{color:var(--ok)}
-#timer .m{color:var(--mut);font-size:20px}
-#timer .big{max-width:360px;margin-top:22px}
+#timer .n{font-size:min(38vw,190px);font-weight:800;line-height:1;margin:12px 0;letter-spacing:-3px}
+#timer.soon .n{color:var(--warn)}
+#timer .m{color:var(--mut);font-size:24px}
+#timer .row{width:100%;max-width:520px;margin-top:26px}
+#timer .big{margin:0;min-height:110px;font-size:30px}
+#timer .good{max-width:520px}
+/* musica Spotify (barra durante l'allenamento, sopra anche alla pausa) */
+#musica{position:fixed;left:0;right:0;bottom:calc(74px + env(safe-area-inset-bottom));z-index:25;display:none;padding:0 10px}
+#musica.on{display:block}
+#musica .in{max-width:560px;margin:0 auto;background:#1a2a20;border:1px solid #2f5a3e;border-radius:18px;padding:8px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 20px #0008}
+#musica img{width:52px;height:52px;border-radius:10px;flex:none;object-fit:cover;background:var(--card2)}
+#musica .txt{flex:1;min-width:0;font-size:16px;line-height:1.25}
+#musica .txt b,#musica .txt span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#musica .txt span{color:var(--mut);font-size:14px}
+#musica button,#musica a{flex:none;width:56px;height:56px;border-radius:14px;border:0;background:var(--card2);color:var(--fg);font-size:24px;display:flex;align-items:center;justify-content:center;text-decoration:none}
+#musica button.pp{background:#1db954;color:#04210f;width:64px}
+#timer.on ~ #musica{bottom:calc(14px + env(safe-area-inset-bottom))}
+body.conMusica{padding-bottom:calc(160px + env(safe-area-inset-bottom))}
 /* menù */
 .day{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px}
 .day.today{border-color:var(--acc)}
@@ -112,7 +133,9 @@ dialog::backdrop{background:#000a}
 </nav>
 
 <div id="timer"><div class="m" id="tTitle">Pausa</div><div class="n" id="tNum">0:00</div><div class="m" id="tNext"></div>
-  <button class="big sec" id="tPlus">+30 secondi</button><button class="big" id="tSkip">Salta la pausa</button></div>
+  <div class="good" id="tMsg" hidden></div>
+  <div class="row"><button class="big sec" id="tPlus">+30 s</button><button class="big" id="tSkip">Salta ▶</button></div></div>
+<div id="musica"><div class="in" id="mIn"></div></div>
 
 <dialog id="dlg"></dialog>
 <div id="toast"></div>
@@ -153,8 +176,23 @@ const ES = {
   curl:{nome:'Curl con manubri',serie:2,min:10,max:12,pausa:60,part:'3-5 kg per mano',tipo:'m',come:'Gomiti fermi lungo i fianchi, sali e scendi senza dondolare.'},
   crunch:{nome:'Crunch sulla panca',serie:2,min:12,max:15,pausa:60,part:'solo corpo',tipo:'c',come:'Sdraiato, piedi appoggiati. Solleva le spalle contraendo l\'addome, senza tirare il collo con le mani.'},
   squat:{nome:'Squat con manubri',serie:3,min:10,max:10,pausa:120,part:'4-6 kg per mano',tipo:'m',come:'Piedi larghi come le spalle. Scendi come per sederti fino a cosce parallele al pavimento, risali spingendo coi talloni.'},
+  prova:{nome:'Panca leggera di prova',serie:1,min:12,max:12,pausa:60,part:'metà del peso della panca',tipo:'m',prova:true,come:'Come la panca piana ma con metà del peso, movimento lento e pulito: scalda spalle e petto.'},
 };
-const SCHEDA = ['panca','pectoral','lat','rematore','legext','lento','curl','crunch'];
+const RISCALDAMENTO = {nome:'Riscaldamento', dur:300, come:'Camminata veloce sul posto e saltelli leggeri.'};
+// mobilità guidata: passa da sola all'esercizio dopo; cambio = avviso "cambia lato" a metà
+const MOBILITA = [
+  {nome:'Circonduzioni braccia', dur:40, come:'Braccia tese di lato, cerchi ampi: metà tempo in avanti, metà indietro.'},
+  {nome:'Passaggi col bastone', dur:60, come:'Bastone (o asciugamano) a mani larghe, braccia tese: portalo da davanti a dietro la schiena e ritorno, piano.'},
+  {nome:'Gatto-mucca', dur:60, come:'A quattro zampe: inarca la schiena in alto buttando fuori l\'aria, poi abbassa la pancia e guarda avanti inspirando.'},
+  {nome:'Libro aperto', dur:90, come:'Sdraiato su un fianco, ginocchia piegate, braccia tese avanti: apri il braccio di sopra verso l\'altro lato seguendolo con lo sguardo, poi richiudi.'},
+  {nome:'Affondo per l\'anca', dur:90, cambio:true, come:'Un ginocchio a terra, l\'altro piede avanti: spingi il bacino in avanti finché senti tirare davanti all\'anca. A metà cambia lato.'},
+  {nome:'Squat lento', dur:90, come:'Senza pesi: scendi in 3-4 secondi, fermati un attimo in basso, risali piano.'},
+  {nome:'Polsi e caviglie', dur:60, come:'Ruota polsi e caviglie nei due sensi, poi apri e chiudi le mani.'},
+];
+// ordine della scheda di lunedì, mercoledì e venerdì
+const SCHEDA = ['riscaldamento','mobilita','prova','panca','pectoral','lat','rematore','legext','lento','curl','crunch'];
+// sabato, uno sì e uno no: squat con manubri 3×10, pausa 2 min (la "variante" della leg extension)
+const SQUAT_SABATO = ['riscaldamento','mobilita','squat'];
 
 /* ================= SALVATAGGIO ================= */
 const KEY = 'massa-v1';
@@ -218,7 +256,7 @@ function vociDi(d){
   v.push({id:'omega', h:'12:30', t:'Omega 3', d:'Durante il pasto, dose della confezione', int:1});
   v.push({id:'spuntino', h:'16:00', t:'Spuntino', d:m.spu});
   if (all==='scheda') v.push({id:'preworkout', h:'17:00', t:'Pre-workout Vitastrong', d:'Dose dell\'etichetta', int:1});
-  if (all) v.push({id:'allenamento', h: all==='scheda' ? '17:30' : '—', t: all==='scheda' ? 'Allenamento' : 'Squat del sabato', d: all==='scheda' ? '8 esercizi, circa 50 minuti' : 'Squat con manubri 3×10', vai:'allenamento'});
+  if (all) v.push({id:'allenamento', h: all==='scheda' ? '17:30' : '—', t: all==='scheda' ? 'Allenamento' : 'Squat del sabato', d: all==='scheda' ? 'Riscaldamento, mobilità e 9 esercizi, circa '+stimaMin(SCHEDA)+' minuti' : 'Riscaldamento, mobilità e squat con manubri 3×10', vai:'allenamento'});
   v.push({id:'cena', h:'19:30', t:'Cena', d:m.cen});
   v.push({id:'notte', h:'22:30', t:'Prima di dormire', d:m.not});
   v.push({id:'magnesio', h:'22:30', t:'Magnesio bisglicinato', d:'Dose della confezione', int:1});
@@ -259,73 +297,140 @@ function spunta(id){
 /* ================= ALLENAMENTO ================= */
 let W = null; // allenamento in corso (salvato in S.wo)
 let installEvt = null; // richiesta di installazione di Chrome
-function nuovoAllenamento(tipo){
-  const lista = tipo==='squat' ? ['squat'] : SCHEDA;
-  W = {data: iso(oggi()), tipo, lista, i: -1, serie: []}; // i = -1: riscaldamento
-  S.wo = W; save(); render();
+const SET_SEC = 40, CAMBIO_SEC = 30; // per la stima: durata media di una serie e del cambio attrezzo
+const fmtT = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s/60)+':'+pad(s%60); };
+const durMobilita = () => MOBILITA.reduce((a,m) => a+m.dur, 0);
+const isFase = id => id==='riscaldamento' || id==='mobilita';
+function nomeStep(id){ return id==='riscaldamento' ? 'Riscaldamento' : id==='mobilita' ? 'Mobilità' : ES[id].nome; }
+function durataStep(id){
+  if (id==='riscaldamento') return RISCALDAMENTO.dur;
+  if (id==='mobilita') return durMobilita();
+  const e = ES[id]; return e.serie*SET_SEC*(e.perBraccio?2:1) + e.serie*e.pausa + CAMBIO_SEC;
 }
+// secondi stimati dal passo "da" alla fine (dopo l'ultima serie dell'ultimo esercizio non c'è pausa)
+function stimaSec(lista, da, serieFatte){
+  let t = 0;
+  for (let j=da; j<lista.length; j++) t += durataStep(lista[j]);
+  const ult = lista[lista.length-1]; if (!isFase(ult)) t -= ES[ult].pausa;
+  if (serieFatte && !isFase(lista[da])){ const e = ES[lista[da]]; t -= serieFatte*(SET_SEC*(e.perBraccio?2:1) + e.pausa); }
+  return Math.max(0, t);
+}
+const stimaMin = lista => Math.round(stimaSec(lista, 0)/300)*5; // arrotondata a 5 minuti
+
+function nuovoAllenamento(tipo){
+  sbloccaAudio();
+  const lista = tipo==='squat' ? SQUAT_SABATO : SCHEDA;
+  W = {v:2, data: iso(oggi()), inizio: Date.now(), tipo, lista: lista.slice(), i: 0, serie: [], pausa: null};
+  inizioStep(); schermoAcceso(true); render(); scrollTo(0,0);
+}
+function inizioStep(){
+  W.serie = []; delete W.kgCorrente; delete W.repsCorrente;
+  W.t0 = Date.now(); W.ferma = null; W.tSerie = Date.now(); W.avv = false; W.mezzo = -1;
+  S.wo = W; save();
+}
+function vaiAStep(i){ W.i = i; inizioStep(); render(); scrollTo(0,0); }
 function pesoProposto(id){
   const e = ES[id];
   if (e.tipo==='c') return 0;
+  if (e.prova) return Math.round(pesoProposto('panca')/2*2)/2; // metà della panca, a 0,5 kg
   if (S.sugg[id]) return S.sugg[id];
   if (S.kg[id]) return S.kg[id];
   return numero(e.part); // primo numero della partenza
 }
+function repsTxt(e){ return (e.min===e.max ? e.max : e.min+'–'+e.max)+' ripetizioni'+(e.perBraccio?' per braccio':''); }
+
 function vistaAllenamento(){
-  W = S.wo && S.wo.data === iso(oggi()) ? S.wo : null;
+  W = S.wo && S.wo.v===2 && S.wo.data === iso(oggi()) ? S.wo : null;
   const d = oggi(), tipo = allenaOggi(d);
   if (!W){
-    let h = `<h1>Allenamento</h1><div class="sub">Lunedì, mercoledì e venerdì alle 17:30 · squat un sabato sì e uno no</div>`;
+    let h = `<h1>Allenamento</h1><div class="sub">Lunedì, mercoledì e venerdì alle 17:30 · circa ${stimaMin(SCHEDA)} minuti · squat un sabato sì e uno no</div>`;
     if (S.checks[iso(d)] && S.checks[iso(d)].allenamento) h += `<div class="good">✅ Allenamento di oggi già fatto. Bravo!</div>`;
-    else if (tipo) h += `<div style="margin-top:16px"><button class="big" onclick="nuovoAllenamento('${tipo}')">▶ Inizia ${tipo==='squat'?'lo squat del sabato':'l\'allenamento'}</button></div>`;
+    else if (tipo) h += `<div style="margin-top:16px"><button class="big huge" onclick="nuovoAllenamento('${tipo}')">▶ Inizia ${tipo==='squat'?'lo squat del sabato':'l\'allenamento'}</button></div>`;
     else h += `<div class="card" style="margin-top:14px">Oggi è giorno di riposo 😴<br><span class="sub">${d.getDay()===6 ? 'Questo sabato niente squat (l\'hai fatto sabato scorso).' : 'Il prossimo allenamento: '+prossimoAllenamento()}</span></div>`;
     if (d.getDay()===6) h += `<button class="big sec" style="margin-top:10px" onclick="cambiaSquat()">${squatOggi(d)?'Oggi niente squat':'Oggi voglio fare lo squat'}</button>`;
     if (!tipo) h += `<button class="big sec" style="margin-top:10px" onclick="nuovoAllenamento('scheda')">Fai comunque la scheda completa</button>`;
-    h += `<h2>Gli esercizi</h2>`;
-    for (const id of SCHEDA.concat(['squat'])){
-      const e = ES[id], kg = S.sugg[id] || S.kg[id];
-      h += `<div class="card"><div class="t" style="font-weight:800;font-size:20px">${e.nome}</div>
-        <div class="sub">${e.serie}×${e.min===e.max?e.max:e.min+'-'+e.max}${e.perBraccio?' per braccio':''} · pausa ${pausaTxt(e.pausa)} · ${e.tipo==='c' ? 'solo corpo' : (kg ? 'prossima volta '+fmtKg(kg)+' kg' : 'partenza '+e.part)}</div></div>`;
-    }
+    h += `<h2>La scheda, in ordine</h2>`;
+    SCHEDA.forEach((id,n) => {
+      let t, s;
+      if (id==='riscaldamento'){ t = RISCALDAMENTO.nome; s = RISCALDAMENTO.come+' · '+pausaTxt(RISCALDAMENTO.dur)+', conto alla rovescia'; }
+      else if (id==='mobilita'){ t = 'Mobilità'; s = pausaTxt(durMobilita())+', timer guidato: '+MOBILITA.map(m => m.nome+' '+m.dur+' s').join(', '); }
+      else { const e = ES[id], kg = S.sugg[id] || S.kg[id];
+        t = e.nome; s = e.serie+'×'+(e.min===e.max?e.max:e.min+'–'+e.max)+(e.perBraccio?' per braccio':'')+' · pausa '+pausaTxt(e.pausa)+' · '+
+          (e.tipo==='c' ? 'solo corpo' : e.prova ? 'circa '+fmtKg(pesoProposto(id))+' kg per mano' : (kg ? 'prossima volta '+fmtKg(kg)+' kg' : 'partenza '+e.part));
+        if (id==='legext') s += '<br>Il sabato, uno sì e uno no: Squat con manubri 3×10, pausa 2 min'; }
+      h += `<div class="card"><div style="font-weight:800;font-size:20px">${n+1}. ${t}</div><div class="sub">${s}</div></div>`;
+    });
     return h;
   }
-  if (W.i === -1){
-    return `<h1>Riscaldamento</h1><div class="sub">${W.tipo==='squat'?'Squat del sabato':'Prima di iniziare'}</div>
-      <div class="card" style="margin-top:14px;font-size:19px">1. <b>5 minuti di movimento leggero</b> (cyclette, camminata veloce, braccia e spalle).<br><br>
-      2. <b>Una serie leggera</b> del primo esercizio, con poco peso, per scaldare i muscoli.</div>
-      <button class="big" onclick="W.i=0;W.serie=[];S.wo=W;save();render()">Fatto, si parte! ▶</button>
-      <button class="big sec" onclick="annullaAllenamento()">Annulla</button>`;
-  }
   if (W.i >= W.lista.length) return fineAllenamento();
-  const id = W.lista[W.i], e = ES[id], n = W.serie.length;
-  const finito = n >= e.serie;
+  const id = W.lista[W.i];
+  if (id==='riscaldamento') return vistaRiscaldamento();
+  if (id==='mobilita') return vistaMobilita();
+  return vistaEsercizio(id);
+}
+function bottoniFase(){
+  return `<div class="row" style="margin-top:14px"><button class="big sec huge" style="margin:0" id="cPausa" onclick="pausaFase()">${W.ferma?'▶ Riprendi':'⏸ Pausa'}</button>
+    <button class="big huge" style="margin:0" onclick="saltaFase()">Salta ▶</button></div>`;
+}
+function vistaRiscaldamento(){
+  return `<div class="sub">Prima di iniziare · ≈ ${Math.round(stimaSec(W.lista, W.i)/60)} min in tutto</div>
+    <div class="ex-name" style="margin-top:4px">🔥 Riscaldamento</div>
+    <div class="how">${RISCALDAMENTO.come}</div>
+    <div class="crono" id="cTempo">${fmtT(RISCALDAMENTO.dur)}</div>
+    <div class="bar"><i id="cBar"></i></div>
+    <div class="sub" style="margin-top:10px">Poi: mobilità (${pausaTxt(durMobilita())}), parte da sola</div>
+    ${bottoniFase()}
+    <button class="big sec" style="margin-top:10px" onclick="annullaAllenamento()">Esci</button>`;
+}
+function mobilitaOra(){ // indice dell'esercizio di mobilità e secondi passati dentro di esso
+  let el = ((W.ferma || Date.now()) - W.t0)/1000;
+  for (let j=0;j<MOBILITA.length;j++){ if (el < MOBILITA[j].dur) return {j, el}; el -= MOBILITA[j].dur; }
+  return {j: MOBILITA.length, el: 0};
+}
+let mobMostrato = -1;
+function vistaMobilita(){
+  const {j} = mobilitaOra(), m = MOBILITA[Math.min(j, MOBILITA.length-1)], dopo = MOBILITA[j+1];
+  mobMostrato = j;
+  return `<div class="sub">Mobilità · ${j+1} di ${MOBILITA.length} · ≈ ${Math.round(stimaSec(W.lista, W.i)/60)} min in tutto</div>
+    <div class="ex-name" style="margin-top:4px">${m.nome}</div>
+    <div class="crono" id="cTempo">${fmtT(m.dur)}</div>
+    <div class="hint lato" id="cLato" hidden>↔ Cambia lato!</div>
+    <div class="how">${m.come}</div>
+    <div class="bar"><i id="cBar"></i></div>
+    <div class="sub" style="margin-top:10px">Poi: ${dopo ? dopo.nome+' ('+dopo.dur+' s)' : 'Panca leggera di prova'}, parte da solo</div>
+    ${bottoniFase()}
+    <div class="sets">${MOBILITA.map((x,k) => `<span class="${k<j?'ok':k===j?'cur':''}">${x.nome}</span>`).join('')}</div>
+    <div class="row" style="margin-top:12px"><button class="big sec" style="margin:0" onclick="vaiAStep(W.i+1)">Salta la mobilità</button><button class="big sec" style="margin:0" onclick="annullaAllenamento()">Esci</button></div>`;
+}
+function vistaEsercizio(id){
+  const e = ES[id], n = W.serie.length;
+  const esercizi = W.lista.filter(x => !isFase(x)), num = esercizi.indexOf(id)+1;
   const kg = W.kgCorrente !== undefined ? W.kgCorrente : pesoProposto(id);
   const reps = W.repsCorrente !== undefined ? W.repsCorrente : e.max;
-  let h = `<div class="sub">Esercizio ${W.i+1} di ${W.lista.length}</div>
+  let h = `<div class="sub">Esercizio ${num} di ${esercizi.length} · ≈ ${Math.round(stimaSec(W.lista, W.i, n)/60)} min alla fine</div>
     <div class="ex-name" style="margin-top:4px">${e.nome}</div>
-    <div><span class="pill">${e.serie} serie</span><span class="pill">${e.min===e.max?e.max:e.min+'-'+e.max} ripetizioni${e.perBraccio?' per braccio':''}</span><span class="pill">pausa ${pausaTxt(e.pausa)}</span></div>
-    <div class="how">${e.come}</div>`;
-  if (e.tipo!=='c' && S.sugg[id] && !n) h += `<div class="hint">💪 L'ultima volta hai fatto tutte le ripetizioni: oggi prova con <b>${fmtKg(S.sugg[id])} kg</b>.</div>`;
-  h += `<div class="sets">` + Array.from({length:e.serie}, (_,j) => {
+    <div class="serieN">Serie ${n+1} di ${e.serie}</div>
+    <div class="repsN">${repsTxt(e)}${e.tipo!=='c' ? ' · '+fmtKg(kg)+' kg'+(e.tipo==='m'&&!e.perBraccio?' per mano':'') : ''}</div>
+    <div class="crono run" id="cSerie" onclick="W.tSerie=Date.now();S.wo=W;save();loop()" title="Tocca per ripartire da zero">0:00</div>
+    <div class="sub" style="text-align:center;margin-top:-4px">tempo della serie · tocca per azzerare</div>
+    <button class="big ok huge" style="margin-top:14px" onclick="serieFinita()">✓ Serie finita</button>
+    <div class="sub" style="text-align:center;margin-top:6px">Poi parte la pausa di ${pausaTxt(e.pausa)}</div>`;
+  if (e.tipo!=='c' && !e.prova && S.sugg[id] && !n) h += `<div class="hint">💪 L'ultima volta hai fatto tutte le ripetizioni: oggi prova con <b>${fmtKg(S.sugg[id])} kg</b>.</div>`;
+  if (e.prova) h += `<div class="hint">Metà del peso della panca: circa <b>${fmtKg(kg)} kg per mano</b>. Serve solo a scaldare, non conta per i progressi.</div>`;
+  if (e.serie > 1) h += `<div class="sets">` + Array.from({length:e.serie}, (_,j) => {
       const s = W.serie[j];
-      return s ? `<span class="ok">Serie ${j+1}: ${e.tipo==='c'?'':fmtKg(s.kg)+' kg × '}${s.reps} ✓</span>` : `<span>Serie ${j+1}</span>`;
+      return s ? `<span class="ok">Serie ${j+1}: ${e.tipo==='c'?'':fmtKg(s.kg)+' kg × '}${s.reps} ✓</span>` : `<span class="${j===n?'cur':''}">Serie ${j+1}</span>`;
     }).join('') + `</div>`;
-  if (!finito){
+  if (!e.prova){
     h += `<div class="card" style="margin-top:14px">`;
-    if (e.tipo!=='c') h += `<label class="l">Peso usato (kg${e.tipo==='m'&&!e.perBraccio?' per mano':''})</label>
+    if (e.tipo!=='c') h += `<label class="l" style="margin-top:0">Peso usato (kg${e.tipo==='m'&&!e.perBraccio?' per mano':''})</label>
       <div class="stepper"><button onclick="cambiaKg(-1)">−</button><input id="kg" inputmode="decimal" value="${fmtKg(kg)}" onchange="W.kgCorrente=numero(this.value)||0;S.wo=W;save()"><button onclick="cambiaKg(1)">+</button></div>
       <div class="sub" style="margin-top:6px">Partenza consigliata: ${e.part}${S.kg[id]?' · ultima volta '+fmtKg(S.kg[id])+' kg':''}</div>`;
-    h += `<label class="l">Ripetizioni fatte</label>
-      <div class="stepper"><button onclick="cambiaReps(-1)">−</button><input id="reps" inputmode="numeric" value="${reps}" onchange="W.repsCorrente=parseInt(this.value)||0;S.wo=W;save()"><button onclick="cambiaReps(1)">+</button></div></div>
-      <button class="big ok" onclick="serieFatta()">✓ Serie ${n+1} fatta · parte la pausa</button>`;
-  } else {
-    const tutteMax = W.serie.every(s => s.reps >= e.max);
-    if (e.tipo!=='c' && tutteMax) h += `<div class="good">🔥 Tutte le serie al massimo! La prossima volta: <b>${fmtKg(W.serie[W.serie.length-1].kg + (e.tipo==='m'?1:2.5))} kg</b> (+${e.tipo==='m'?'1':'2,5'} kg).</div>`;
-    else if (e.tipo==='c' && tutteMax) h += `<div class="good">🔥 Tutte le ripetizioni fatte!</div>`;
-    else h += `<div class="card" style="margin-top:12px">Esercizio finito. La prossima volta resta allo stesso peso finché non fai tutte le serie a ${e.max} ripetizioni.</div>`;
-    h += `<button class="big" style="margin-top:14px" onclick="prossimoEsercizio()">${W.i+1 < W.lista.length ? 'Prossimo: '+ES[W.lista[W.i+1]].nome+' ▶' : 'Finisci allenamento ✓'}</button>`;
+    h += `<label class="l"${e.tipo==='c'?' style="margin-top:0"':''}>Ripetizioni fatte</label>
+      <div class="stepper"><button onclick="cambiaReps(-1)">−</button><input id="reps" inputmode="numeric" value="${reps}" onchange="W.repsCorrente=parseInt(this.value)||0;S.wo=W;save()"><button onclick="cambiaReps(1)">+</button></div></div>`;
   }
-  h += `<div class="row" style="margin-top:10px;gap:10px"><button class="big sec" style="margin:0" onclick="saltaEsercizio()">Salta esercizio</button><button class="big sec" style="margin:0" onclick="annullaAllenamento()">Esci</button></div>`;
+  h += `<div class="how">${e.come}</div>`;
+  h += `<div class="row" style="margin-top:14px;gap:10px"><button class="big sec" style="margin:0" onclick="saltaEsercizio()">Salta esercizio</button><button class="big sec" style="margin:0" onclick="annullaAllenamento()">Esci</button></div>`;
   return h;
 }
 function pausaTxt(s){ return s>=60 ? (s%60 ? Math.floor(s/60)+' min '+(s%60)+' s' : (s/60)+' min') : s+' s'; }
@@ -334,38 +439,47 @@ function cambiaKg(dir){ const e = ES[W.lista[W.i]]; const passo = e.tipo==='m' ?
   W.kgCorrente = Math.max(0, Math.round((cur + dir*passo)*10)/10); S.wo = W; save(); render(); }
 function cambiaReps(dir){ const e = ES[W.lista[W.i]]; const cur = W.repsCorrente !== undefined ? W.repsCorrente : e.max;
   W.repsCorrente = Math.max(0, cur+dir); S.wo = W; save(); render(); }
-function serieFatta(){
+function serieFinita(){
+  sbloccaAudio();
   const id = W.lista[W.i], e = ES[id];
   const kgEl = $('#kg'), repsEl = $('#reps');
-  const kg = e.tipo==='c' ? 0 : (numero(kgEl.value) || 0);
-  const reps = parseInt(repsEl.value) || 0;
+  const kg = e.tipo==='c' ? 0 : (kgEl ? numero(kgEl.value) || 0 : pesoProposto(id));
+  const reps = repsEl ? parseInt(repsEl.value) || 0 : e.max;
   W.kgCorrente = kg; W.repsCorrente = reps;
-  W.serie.push({kg, reps}); S.wo = W; save(); vibra(30);
+  W.serie.push({kg, reps, sec: Math.round((Date.now()-W.tSerie)/1000)}); vibra(30);
   const ultima = W.serie.length >= e.serie;
-  if (ultima) chiudiEsercizio();
-  render();
-  // pausa anche dopo l'ultima serie, prima del prossimo esercizio (non alla fine di tutto)
-  if (!ultima || W.i+1 < W.lista.length) avviaTimer(e.pausa, ultima ? 'Prossimo: '+ES[W.lista[W.i+1]].nome : 'Poi serie '+(W.serie.length+1)+' di '+e.serie);
+  let msg = '', txt;
+  if (ultima){
+    if (!e.prova) msg = chiudiEsercizio();
+    W.i++; inizioStep();                       // finite le serie: si passa da soli all'esercizio dopo
+    if (W.i >= W.lista.length){ render(); scrollTo(0,0); return; } // dopo l'ultima serie niente pausa
+    txt = 'Prossimo: '+nomeStep(W.lista[W.i]);
+  } else txt = 'Poi: serie '+(W.serie.length+1)+' di '+e.serie;
+  avviaPausa(e.pausa, txt, msg);
+  render(); scrollTo(0,0);
 }
 function chiudiEsercizio(){
   const id = W.lista[W.i], e = ES[id];
   const kg = W.serie[W.serie.length-1].kg;
   if (e.tipo!=='c') S.kg[id] = kg;
   const tutteMax = W.serie.every(s => s.reps >= e.max);
-  if (e.tipo!=='c' && tutteMax) S.sugg[id] = Math.round((kg + (e.tipo==='m'?1:2.5))*10)/10; else delete S.sugg[id];
+  let msg = '';
+  if (e.tipo!=='c' && tutteMax){ S.sugg[id] = Math.round((kg + (e.tipo==='m'?1:2.5))*10)/10; msg = '🔥 Tutte le serie al massimo! '+e.nome+' la prossima volta: '+fmtKg(S.sugg[id])+' kg'; }
+  else { delete S.sugg[id]; if (e.tipo==='c' && tutteMax) msg = '🔥 Tutte le ripetizioni fatte!'; }
   S.log.push({data: W.data, es: id, serie: W.serie.slice()});
-  save();
+  save(); return msg;
 }
-function prossimoEsercizio(){ W.i++; W.serie = []; delete W.kgCorrente; delete W.repsCorrente; S.wo = W; save(); render(); scrollTo(0,0); }
-function saltaEsercizio(){ if (W.serie.length && W.serie.length < ES[W.lista[W.i]].serie && !confirm('Saltare il resto di questo esercizio?')) return; prossimoEsercizio(); }
-function annullaAllenamento(){ if (!confirm('Uscire dall\'allenamento? Le serie già fatte restano salvate.')) return; S.wo = null; W = null; save(); vai('oggi'); }
+function saltaEsercizio(){ if (W.serie.length && !confirm('Saltare il resto di questo esercizio?')) return; vaiAStep(W.i+1); }
+function annullaAllenamento(){ if (!confirm('Uscire dall\'allenamento? Le serie già fatte restano salvate.')) return;
+  chiudiOverlay(); schermoAcceso(false); S.wo = null; W = null; save(); vai('oggi'); }
 function fineAllenamento(){
   const k = W.data; S.checks[k] = S.checks[k] || {}; S.checks[k].allenamento = true;
   if (W.tipo==='squat') S.squatFatto = k;
-  S.wo = null; save();
+  const min = Math.round((Date.now() - W.inizio)/60000);
+  S.wo = null; save(); chiudiOverlay(); schermoAcceso(false);
   const fatti = S.log.filter(l => l.data===k).length;
-  W = null;
-  return `<h1>Finito! 🎉</h1><div class="good" style="font-size:20px">Hai completato ${fatti} esercizi. Ora mangia e riposa: i muscoli crescono mentre recuperi.</div>
+  W = null; suona('fine'); vibra([300,100,300]);
+  return `<h1>Finito! 🎉</h1><div class="good" style="font-size:20px">Hai completato ${fatti} esercizi${min>0 && min<300 ? ' in '+min+(min===1?' minuto':' minuti') : ''}. Ora mangia e riposa: i muscoli crescono mentre recuperi.</div>
     <button class="big" style="margin-top:16px" onclick="vai('oggi')">Torna a Oggi</button>`;
 }
 function prossimoAllenamento(){
@@ -375,43 +489,151 @@ function prossimoAllenamento(){
 }
 function cambiaSquat(){ const d = oggi(), k = iso(d); S.squatOk[k] = !squatOggi(d); save(); render(); }
 
-/* ---- timer di pausa ---- */
-let tFine = 0, tInt = null, audio = null, wake = null;
-function suona(){
+/* ---- riscaldamento e mobilità: pausa e salta ---- */
+function pausaFase(){
+  if (W.ferma){ W.t0 += Date.now() - W.ferma; W.ferma = null; } else W.ferma = Date.now();
+  S.wo = W; save(); render();
+}
+function saltaFase(){
+  if (W.lista[W.i]==='mobilita'){
+    const {j} = mobilitaOra(); let fino = 0; for (let k=0;k<=j;k++) fino += MOBILITA[k].dur;
+    if (j+1 >= MOBILITA.length){ vaiAStep(W.i+1); return; }
+    W.t0 = (W.ferma || Date.now()) - fino*1000; W.mezzo = -1; S.wo = W; save(); render();
+  } else vaiAStep(W.i+1);
+}
+
+/* ---- suoni, vibrazione, schermo acceso ---- */
+let audio = null, wake = null, wakeReq = false;
+function sbloccaAudio(){ try{ audio = audio || new (window.AudioContext||window.webkitAudioContext)(); audio.resume(); }catch(e){} }
+function suona(tipo){ // 'avviso' = un bip (10 s alla fine), 'cambio' = due bip, 'fine' = tre bip
   try{
-    audio = audio || new (window.AudioContext||window.webkitAudioContext)();
+    sbloccaAudio();
     const t0 = audio.currentTime;
-    [0, .35, .7].forEach((dt,i) => {
+    const note = tipo==='avviso' ? [[0,660]] : tipo==='cambio' ? [[0,880],[.25,1100]] : [[0,880],[.35,880],[.7,1320]];
+    note.forEach(([dt,f]) => {
       const o = audio.createOscillator(), g = audio.createGain();
-      o.frequency.value = i===2 ? 1320 : 880; o.type = 'sine';
-      g.gain.setValueAtTime(.0001, t0+dt); g.gain.exponentialRampToValueAtTime(.6, t0+dt+.02); g.gain.exponentialRampToValueAtTime(.0001, t0+dt+.28);
+      o.frequency.value = f; o.type = 'sine';
+      g.gain.setValueAtTime(.0001, t0+dt); g.gain.exponentialRampToValueAtTime(.95, t0+dt+.02); g.gain.exponentialRampToValueAtTime(.0001, t0+dt+.28);
       o.connect(g).connect(audio.destination); o.start(t0+dt); o.stop(t0+dt+.3);
     });
   }catch(e){}
 }
-async function avviaTimer(sec, prossimo){
-  try{ audio = audio || new (window.AudioContext||window.webkitAudioContext)(); audio.resume(); }catch(e){} // sblocca l'audio col tocco
-  tFine = Date.now() + sec*1000;
-  $('#tTitle').textContent = 'Pausa'; $('#tNext').textContent = prossimo || '';
-  $('#timer').classList.remove('end'); $('#timer').classList.add('on'); $('#tSkip').textContent = 'Salta la pausa';
-  clearInterval(tInt); tick(); tInt = setInterval(tick, 250);
-  // tiene acceso lo schermo durante la pausa
-  try{ window.AndroidApp && AndroidApp.schermoAcceso(true); }catch(e){}
-  try{ if ('wakeLock' in navigator && !wake) wake = await navigator.wakeLock.request('screen'); }catch(e){}
+document.addEventListener('pointerdown', () => { if (audio && audio.state!=='running') sbloccaAudio(); }, {passive:true});
+async function schermoAcceso(on){
+  try{ window.AndroidApp && AndroidApp.schermoAcceso(on); }catch(e){}
+  if (!on){ try{ wake && wake.release(); }catch(e){} wake = null; return; }
+  if (wake || wakeReq || !('wakeLock' in navigator) || document.visibilityState!=='visible') return;
+  wakeReq = true;
+  try{ wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); }catch(e){}
+  wakeReq = false;
 }
-function tick(){
-  const r = Math.max(0, Math.ceil((tFine - Date.now())/1000));
-  $('#tNum').textContent = Math.floor(r/60)+':'+pad(r%60);
-  if (r <= 0){
-    clearInterval(tInt); tInt = null;
-    $('#timer').classList.add('end'); $('#tTitle').textContent = 'Pausa finita!'; $('#tSkip').textContent = 'Vai! ▶';
-    suona(); vibra([400,150,400,150,600]);
+
+/* ---- pausa tra le serie (schermata intera) ---- */
+function avviaPausa(sec, prossimo, msg){
+  W.pausa = {fine: Date.now() + sec*1000, txt: prossimo || '', msg: msg || '', avv: sec <= 10};
+  S.wo = W; save(); apriOverlay();
+}
+function apriOverlay(){
+  $('#tTitle').textContent = 'Pausa'; $('#tNext').textContent = W.pausa.txt;
+  $('#tMsg').textContent = W.pausa.msg; $('#tMsg').hidden = !W.pausa.msg;
+  $('#timer').classList.remove('soon'); $('#timer').classList.add('on');
+  schermoAcceso(true); loop();
+}
+function chiudiOverlay(){ $('#timer').classList.remove('on','soon'); }
+function finePausa(){ W.pausa = null; W.tSerie = Date.now(); S.wo = W; save(); chiudiOverlay(); if (vista==='allenamento') render(); }
+$('#tSkip').onclick = finePausa;
+$('#tPlus').onclick = () => { if (!W || !W.pausa) return; W.pausa.fine += 30000; W.pausa.avv = W.pausa.fine - Date.now() <= 10000; S.wo = W; save(); loop(); };
+
+/* ---- un solo orologio per tutti i tempi dell'allenamento ---- */
+function loop(){
+  if (!W || !S.wo) return;
+  const now = Date.now();
+  if (W.pausa){
+    const r = (W.pausa.fine - now)/1000;
+    $('#tNum').textContent = fmtT(r);
+    $('#timer').classList.toggle('soon', r <= 10);
+    if (r <= 10 && !W.pausa.avv){ W.pausa.avv = true; S.wo = W; save(); suona('avviso'); vibra(250); }
+    if (r <= 0){ suona('fine'); vibra([400,150,400,150,600]); finePausa(); toast('Vai! Si riparte'); }
+    return;
   }
+  if (W.i >= W.lista.length) return;
+  const id = W.lista[W.i], qui = vista==='allenamento';
+  if (id==='riscaldamento'){
+    const el = ((W.ferma || now) - W.t0)/1000, r = RISCALDAMENTO.dur - el;
+    if (qui && $('#cTempo')){ $('#cTempo').textContent = fmtT(r); $('#cBar').style.width = Math.min(100, el/RISCALDAMENTO.dur*100)+'%'; }
+    if (r <= 10 && !W.avv){ W.avv = true; S.wo = W; save(); suona('avviso'); vibra(250); }
+    if (r <= 0){ suona('fine'); vibra([400,150,600]); vaiAStep(W.i+1); }
+  } else if (id==='mobilita'){
+    const {j, el} = mobilitaOra();
+    if (j >= MOBILITA.length){ suona('fine'); vibra([400,150,600]); vaiAStep(W.i+1); return; }
+    if (j !== mobMostrato){ suona('cambio'); vibra(300); if (qui) render(); else mobMostrato = j; }
+    const m = MOBILITA[j];
+    if (m.cambio && el >= m.dur/2 && W.mezzo !== j){ W.mezzo = j; S.wo = W; save(); suona('cambio'); vibra([300,100,300]); }
+    if (qui && $('#cTempo')){
+      $('#cTempo').textContent = fmtT(m.dur - el);
+      let fatto = el; for (let k=0;k<j;k++) fatto += MOBILITA[k].dur;
+      $('#cBar').style.width = Math.min(100, fatto/durMobilita()*100)+'%';
+      $('#cLato').hidden = !(m.cambio && el >= m.dur/2);
+    }
+  } else if (qui && $('#cSerie')) $('#cSerie').textContent = fmtT(Math.floor((now - W.tSerie)/1000));
 }
-function chiudiTimer(){ clearInterval(tInt); tInt = null; $('#timer').classList.remove('on'); try{ wake && wake.release(); }catch(e){} wake = null;
-  try{ window.AndroidApp && AndroidApp.schermoAcceso(false); }catch(e){} }
-$('#tSkip').onclick = chiudiTimer;
-$('#tPlus').onclick = () => { if (!tInt){ $('#timer').classList.remove('end'); $('#tTitle').textContent='Pausa'; $('#tSkip').textContent='Salta la pausa'; tFine = Date.now(); tInt = setInterval(tick,250); } tFine += 30000; tick(); };
+setInterval(loop, 250);
+
+/* ---- musica Spotify: comandi tramite il programma Musica sul PC (serve Premium) ---- */
+const MUSICA_URL = 'https://ciccio-casa.duckdns.org:8093';
+const musicaUrl = () => S.musicaUrl || MUSICA_URL;
+const M = {stato: null, errore: '', ultimo: 0, inCorso: false};
+async function musicaApi(path, corpo){
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 7000);
+  try{
+    // text/plain: richiesta "semplice", il server legge comunque il JSON
+    const r = await fetch(musicaUrl()+path, corpo ? {method:'POST', body: JSON.stringify(corpo), headers:{'Content-Type':'text/plain'}, signal: ctl.signal} : {signal: ctl.signal, cache:'no-store'});
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.errore || 'Errore di Spotify');
+    return d;
+  } catch(e){ throw new Error(e.name==='AbortError' || e instanceof TypeError ? 'Programma Musica non raggiungibile: il PC è acceso?' : e.message); }
+  finally{ clearTimeout(t); }
+}
+async function musicaAggiorna(){
+  if (M.inCorso) return; M.inCorso = true; M.ultimo = Date.now();
+  try{ M.stato = await musicaApi('/api/ora'); M.errore = ''; }
+  catch(e){ M.stato = null; M.errore = e.message; }
+  M.inCorso = false; disegnaMusica();
+}
+async function musica(azione){
+  sbloccaAudio(); vibra(15);
+  if (azione==='pausa' || azione==='play'){ if (M.stato && M.stato.attivo) M.stato.in_riproduzione = azione==='play'; disegnaMusica(); }
+  try{ await musicaApi('/api/cmd', {azione}); }
+  catch(e){ toast(e.message); }
+  setTimeout(musicaAggiorna, 700);
+}
+function musicaAttiva(){ return S.musica !== false && W && S.wo; }
+function barraMusica(){
+  const on = !!musicaAttiva();
+  $('#musica').classList.toggle('on', on); document.body.classList.toggle('conMusica', on);
+  if (on){ disegnaMusica(); if (Date.now() - M.ultimo > 4000) musicaAggiorna(); }
+}
+function disegnaMusica(){
+  if (!musicaAttiva()) return;
+  const s = M.stato, el = $('#mIn');
+  if (!s){
+    el.innerHTML = `<span style="font-size:30px;padding:0 6px">🎵</span><div class="txt"><b>${M.errore ? 'Musica non collegata' : 'Collego Spotify…'}</b><span>${esc(M.errore)}</span></div>
+      <button onclick="musicaAggiorna()" aria-label="Riprova">↻</button>`;
+    return;
+  }
+  if (!s.attivo){
+    el.innerHTML = `<span style="font-size:30px;padding:0 6px">🎵</span><div class="txt"><b>Spotify è fermo</b><span>Tocca ▶ o aprilo e fai partire una playlist</span></div>
+      <a href="https://open.spotify.com/" target="_blank" rel="noopener" aria-label="Apri Spotify">↗</a><button class="pp" onclick="musica('play')" aria-label="Play">▶</button>`;
+    return;
+  }
+  const b = s.brano || {};
+  el.innerHTML = `${b.img ? `<img src="${esc(b.img)}" alt="">` : ''}<div class="txt"><b>${esc(b.nome||'')}</b><span>${esc(b.artisti||'')}${s.dispositivo ? ' · '+esc(s.dispositivo) : ''}</span></div>
+    <button onclick="musica('indietro')" aria-label="Brano precedente">⏮</button>
+    <button class="pp" onclick="musica('${s.in_riproduzione?'pausa':'play'}')" aria-label="${s.in_riproduzione?'Pausa':'Play'}">${s.in_riproduzione?'⏸':'▶'}</button>
+    <button onclick="musica('avanti')" aria-label="Brano successivo">⏭</button>`;
+}
+// mentre si allena e l'app è aperta, aggiorna il brano ogni 10 secondi
+setInterval(() => { if (musicaAttiva() && document.visibilityState==='visible' && Date.now() - M.ultimo > 10000) musicaAggiorna(); }, 2000);
 
 /* ================= MENÙ ================= */
 function vistaMenu(){
@@ -516,13 +738,20 @@ function impostazioni(){
     <label class="l" style="margin-top:0">Giorno in cui inizi la creatina (e le maltodestrine)</label>
     <input class="field" style="width:100%;margin-top:6px" type="date" id="inizio" value="${S.start||''}">
     <div class="sub" style="margin-top:6px">Da questa data: creatina 5-7 g la prima settimana poi 3 g; maltodestrine 25 g + 25 g le prime 2 settimane poi 40 g + 40 g.</div>
+    <h2>🎵 Musica Spotify</h2>
+    <label style="display:flex;gap:12px;align-items:center;font-size:18px"><input type="checkbox" id="musOn" style="width:28px;height:28px" ${S.musica!==false?'checked':''}> Comandi Spotify durante l'allenamento</label>
+    <label class="l">Indirizzo del programma Musica sul PC</label>
+    <input class="field" style="width:100%;margin-top:6px;font-size:16px" id="musUrl" value="${esc(musicaUrl())}">
+    <div class="sub" style="margin-top:6px">Serve Spotify Premium e il PC acceso. Fai partire la musica su Spotify, poi dall'allenamento la comandi con ⏮ ⏯ ⏭.</div>
     <h2>Backup</h2><div class="sub">I dati stanno solo su questo telefono. Ogni tanto salva un backup, così se cambi telefono non perdi niente.</div>
     <button class="big sec" style="margin-top:10px" onclick="esporta()">⬇ Salva backup</button>
     <label class="big sec" style="text-align:center;margin-top:10px">⬆ Ripristina backup<input type="file" accept=".json,application/json" hidden onchange="importa(this.files[0])"></label>
     <button class="big" style="margin-top:16px" onclick="salvaImpostazioni()">Fatto</button>`;
   dl.showModal();
 }
-function salvaImpostazioni(){ const v = $('#inizio').value; S.start = v || null; save(); $('#dlg').close(); render(); }
+function salvaImpostazioni(){ const v = $('#inizio').value; S.start = v || null;
+  S.musica = $('#musOn').checked; const u = $('#musUrl').value.trim().replace(/\/+$/,''); S.musicaUrl = (u && u !== MUSICA_URL) ? u : undefined;
+  M.stato = null; save(); $('#dlg').close(); render(); }
 function esporta(){
   const nome = 'massa-backup-'+iso(oggi())+'.json';
   if (window.AndroidApp){ toast(AndroidApp.salvaFile(nome, JSON.stringify(S,null,1))); return; } // app Android
@@ -544,16 +773,23 @@ function render(){
   $('#view').innerHTML = VISTE[vista]();
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v===vista));
   if (vista==='progressi') disegnaGrafico();
+  barraMusica();
 }
 function vai(v){ vista = v; render(); scrollTo(0,0); try{ history.replaceState(null,'','#'+v); }catch(e){} }
 document.querySelectorAll('#nav button').forEach(b => b.onclick = () => vai(b.dataset.v));
 if (location.hash && VISTE[location.hash.slice(1)]) vista = location.hash.slice(1);
-// se c'è un allenamento in corso oggi, riprendilo
-if (S.wo && S.wo.data === iso(oggi())) vista = 'allenamento';
+// se c'è un allenamento in corso oggi, riprendilo (quelli della versione vecchia si scartano)
+if (S.wo && (S.wo.v !== 2 || S.wo.data !== iso(oggi()))) { S.wo = null; save(); }
+if (S.wo){ vista = 'allenamento'; W = S.wo; }
 render();
+if (W){ schermoAcceso(true); if (W.pausa) apriOverlay(); }
 // a mezzanotte o tornando sull'app aggiorna la giornata
 let ultimoGiorno = iso(oggi());
-document.addEventListener('visibilitychange', () => { if (document.visibilityState==='visible' && (iso(oggi())!==ultimoGiorno || vista==='oggi')){ ultimoGiorno = iso(oggi()); if (!$('#timer').classList.contains('on')) render(); } });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState!=='visible') return;
+  if (W && S.wo) schermoAcceso(true); // il Wake Lock si perde quando l'app va in background
+  if (iso(oggi())!==ultimoGiorno || vista==='oggi'){ ultimoGiorno = iso(oggi()); if (!$('#timer').classList.contains('on')) render(); }
+});
 addEventListener('resize', () => { if (vista==='progressi') disegnaGrafico(); });
 
 /* ================= INSTALLAZIONE E OFFLINE ================= */
